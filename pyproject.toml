@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ki67-proliferation-indexer"
+version = "3.0.0"
+description = "Ki-67 Proliferation Indexer - Calculate Ki-67 labeling index from cell counts with clinical grading"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Dr. Abu Suraih Sakhri"}
+]
+keywords = ["ki67", "proliferation", "oncology", "pathology", "clinical"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+ki67-indexer = "cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agents*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "test_ki67_indexer.py"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
