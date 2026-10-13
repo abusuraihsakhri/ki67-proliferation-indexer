@@ -88,3 +88,30 @@ def test_count_api_validation_and_static_root():
     root = client.get("/")
     assert root.status_code == 200
     assert "Positive tumour nuclei" in root.text
+
+
+def test_hmac_field_delimiter_transfer_is_detected():
+    trail = AuditTrail(secret_key="a-dedicated-test-only-key-of-sufficient-length")
+    trail.log("actor|tier", "role", "EVENT", {"ok": True})
+    assert trail.verify_integrity()
+    trail.logs[0]["actor"] = "actor"
+    trail.logs[0]["actor_tier"] = "tier|role"
+    assert not trail.verify_integrity()
+
+
+def test_batch_refuses_overwrite_source_file(tmp_path):
+    source = tmp_path / "counts.csv"
+    source.write_text("positive_cells,total_cells\n1,10\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="different"):
+        process_batch(str(source), str(source))
+    assert "1,10" in source.read_text(encoding="utf-8")
+
+
+def test_legacy_column_order_not_reinterpreted(tmp_path):
+    source = tmp_path / "legacy.csv"
+    result = tmp_path / "legacy_out.csv"
+    source.write_text("v2,v1\n6,10\n", encoding="utf-8")
+    process_batch(str(source), str(result))
+    with result.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+    assert float(row["score"]) == 13.0
