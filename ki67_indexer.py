@@ -24,7 +24,7 @@ def calculate_index(positive_cells: int, total_cells: int) -> Dict[str, Any]:
     positive than total nuclei. This arithmetic does not establish tumour grade.
     """
     for name, value in (("positive_cells", positive_cells), ("total_cells", total_cells)):
-        if isinstance(value, bool) or not str(value).strip().isdigit():
+        if isinstance(value, bool) or not re.fullmatch(r"[0-9]+", str(value).strip()):
             raise ValueError(f"{name} must be a non-negative integer.")
     positive, total = int(positive_cells), int(total_cells)
     if total == 0:
@@ -33,7 +33,7 @@ def calculate_index(positive_cells: int, total_cells: int) -> Dict[str, Any]:
         raise ValueError("positive_cells cannot exceed total_cells.")
     return {
         "tool": "ki67-proliferation-indexer",
-        "score": round(100.0 * positive / total, 2),
+        "score": round(100.0 * (positive / total), 2),
         "positive_cells": positive,
         "total_cells": total,
         "method": "positive_over_total",
@@ -175,6 +175,8 @@ def process_batch(input_csv: str, output_csv: str) -> None:
         out_rows.append(row_dict)
 
     output_path = Path(output_csv)
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError("Input and output CSV paths must be different to avoid overwriting source data.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, mode="w", encoding="utf-8", newline="") as f:
@@ -195,15 +197,15 @@ def main(argv=None):
     single_parser = subparsers.add_parser("single", help="Evaluate single case")
     single_parser.add_argument(
         "--v1", type=float, default=10.0,
-        help="Primary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v1 (not a Ki-67 index)"
     )
     single_parser.add_argument(
         "--v2", type=float, default=5.0,
-        help="Secondary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v2 (not a Ki-67 index)"
     )
     single_parser.add_argument(
         "--v3", type=float, default=2.0,
-        help="Tertiary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v3 (not a Ki-67 index)"
     )
     single_parser.add_argument("--positive-cells", type=int, default=None, help="Ki-67 positive tumour nuclei")
     single_parser.add_argument("--total-cells", type=int, default=None, help="All tumour nuclei counted")
@@ -213,7 +215,7 @@ def main(argv=None):
     batch_parser = subparsers.add_parser("batch", help="Process batch CSV")
     batch_parser.add_argument(
         "-i", "--input", required=True,
-        help="Input CSV file with patient records"
+        help="Input CSV with positive_cells,total_cells or legacy v1/v2 columns"
     )
     batch_parser.add_argument(
         "-o", "--output", default="results.csv",
