@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from ki67_indexer import calculate_index
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -60,7 +60,12 @@ def metrics():
 
 @app.post("/api/audit")
 def api_audit(payload: SystemTaskPayload):
-    dossier = supervisor.process_task(payload)
+    try:
+        dossier = supervisor.process_task(payload)
+    except SecurityException as exc:
+        raise HTTPException(status_code=422, detail="Potential patient identifier detected; use non-identifying codes.") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="Audit service is not configured.") from exc
     return dossier.to_dict()
 
 
