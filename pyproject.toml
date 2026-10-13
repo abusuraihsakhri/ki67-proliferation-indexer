@@ -46,3 +46,6 @@ include = ["agents*"]
 testpaths = ["tests", "test_ki67_indexer.py"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
+
+[tool.setuptools]
+py-modules = ["ki67_indexer", "cli", "enrichment", "simulator"]
