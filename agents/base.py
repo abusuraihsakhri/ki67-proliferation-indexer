@@ -102,7 +102,7 @@ class AuditTrail:
             required = ("audit_id", "timestamp", "actor", "actor_tier",
                         "event_type", "payload_hash", "prev_hash", "current_hash")
             for entry in self.logs:
-                if not all(isinstance(entry.get(key), str) for key in required):
+                if not isinstance(entry, dict) or not all(isinstance(entry.get(key), str) for key in required):
                     return False
                 if entry["prev_hash"] != prev:
                     return False
