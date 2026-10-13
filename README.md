@@ -1,223 +1,124 @@
-# Ki67 Proliferation Indexer
+# Ki-67 Proliferation Indexer
 
-> **Domain:** Medical Oncology & Cancer Staging Systems
-> **Reference Guidelines:** AJCC Cancer Staging Manual & NCCN Clinical Practice Guidelines
+Calculate the **Ki-67 labeling index from cell counts**: the percentage of eligible tumour nuclei that stain positive for Ki-67. A browser calculator, Python command-line tool, CSV processor, and FastAPI endpoint are provided.
 
-<div align="center">
+**Research/educational utility; not a diagnostic or treatment decision system.** This repository does not grade tumours automatically. Clinical interpretation, tissue selection, cell eligibility and counting method must follow the validated protocol for the specific tumour type and specimen.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+## Browser calculator
 
-</div>
+Open [web/index.html](web/index.html) in a modern browser. It works locally without a Python server.
 
----
+1. Enter a **non-identifying** specimen code, positive tumour-nucleus count and total tumour-nucleus count.
+2. Add one or more counting fields. The interface reports each field's index and the pooled index from **summed counts**, rather than an arithmetic mean of percentages.
+3. Remove fields or export the current table to CSV. Reloading clears the page's in-memory records.
 
-## What It Does
+Browser computation and CSV export are entirely client-side: no API calls, remote fonts, cookies, analytics or persistent storage are used by the calculator. The separate expandable **backend audit interface** makes an HTTP request only when explicitly submitted against a local FastAPI instance; it does not run on GitHub Pages.
 
-Ki-67 Proliferation Indexer calculates Ki-67 labeling index (%) from cell counts with breast/NET grading cutoffs. It provides:
+The browser implementation uses ordinary JavaScript, not Python or Pyodide, to avoid a heavy runtime for simple count arithmetic.
 
-- **Single case evaluation** - Calculate Ki-67 score from individual measurements
-- **Batch processing** - Process multiple patient records from CSV files
-- **Clinical classification** - Automatic grading (Low/Moderate/High) based on standard cutoffs
-- **REST API** - FastAPI-based HTTP service for integration
-- **Audit trail** - Tamper-evident HMAC-SHA256 logging of all operations
-- **PHI protection** - Zero-PHI outbound guard preventing accidental data leakage
+## Algorithm
 
-Author: Dr. Abu Suraih Sakhri | License: MIT
+`Ki-67 index (%) = (Ki-67-positive eligible tumour nuclei / total eligible tumour nuclei) × 100`
 
----
+For example, **125 positive nuclei out of 500 total = 25.00%**. Inputs require non-negative whole-cell counts, a positive denominator, and positive cells no greater than total cells. The reported percentage is rounded to two decimals; retain original counts for reproducibility.
 
-## Installation
+This simple count ratio **does not implement the International Ki67 Working Group's calibrated weighted-global breast-cancer scoring method** or site-specific NET grade assignment. Validity depends on representative tissue selection, counting protocol, quality control, and disease-specific interpretation. The previously implemented `v1 + v2/2 + v3/3...` calculation is kept as an **explicitly labeled legacy proxy**, **not a Ki-67 index or clinically validated grade**. Do not use legacy classifications for care decisions.
+
+Reference: Nielsen TO, et al. *Assessment of Ki67 in Breast Cancer: Updated Recommendations From the International Ki67 in Breast Cancer Working Group*. JNCI. 2021;113:808–819. [doi:10.1093/jnci/djaa201](https://doi.org/10.1093/jnci/djaa201).
+
+## Python
+
+Requires Python 3.10 or newer. From a checkout:
 
 ```bash
-# Clone the repository
-git clone https://github.com/abusuraihsakhri/ki67-proliferation-indexer.git
-cd ki67-proliferation-indexer
-
-# Install dependencies
-pip install -e .
-
-# Or install with development dependencies
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
+python -m pytest -q
 ```
 
-### Environment Setup
-
-Create a `.env` file (see `.env.example`):
+Single count-based evaluation:
 
 ```bash
-# Required: Secret key for HMAC-SHA256 audit signing
-# Generate a secure key:
-python -c "import secrets; print(secrets.token_hex(32))"
-export AUDIT_SECRET_KEY="your-generated-key-here"
-
-# Optional: Model provider (mock, ollama, claude, openai)
-export MODEL_PROVIDER=mock
+python -m ki67_indexer single --positive-cells 125 --total-cells 500
 ```
 
----
+Batch count-based CSV:
 
-## Usage
-
-### Command Line Interface
-
-#### Single Case Evaluation
-```bash
-# Using defaults
-python -m ki67_indexer single
-
-# With custom values
-python -m ki67_indexer single --v1 14.5 --v2 4.2 --v3 1.8
-```
-
-#### Batch Processing
 ```bash
 python -m ki67_indexer batch -i sample.csv -o results.csv
 ```
 
-#### Enterprise CLI (with audit trail)
+The input CSV must have both `positive_cells` and `total_cells` headers. Non-measurement columns (such as `sample_id`) are retained in output but excluded from calculations. Invalid counts fail validation. For compatibility, a CSV with `v1`, `v2`, etc. is processed in legacy-proxy mode, clearly marked by the output `method` column. CSVs with incomplete count headers are rejected.
+
+From Python:
+
+```python
+from ki67_indexer import calculate_index, calculate_metrics
+
+count_result = calculate_index(125, 500)
+assert count_result["score"] == 25.0
+assert count_result["method"] == "positive_over_total"
+
+# Backward compatibility only — not a Ki-67 labeling index:
+legacy = calculate_metrics(v1=10, v2=6)
+assert legacy["method"] == "legacy_weighted_proxy_not_ki67"
+```
+
+## Optional FastAPI service
+
+Set a cryptographically random audit key before using the **separate legacy generic audit service**:
+
 ```bash
-# Run audit evaluation
-python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
-
-# Batch processing with audit
-python cli.py batch -i sample.csv -o results.csv
-
-# Verify audit trail integrity
-python cli.py verify-audit
-
-# Start API server
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-### REST API
+Open `http://127.0.0.1:8000/` for the same browser interface. FastAPI also provides:
+
+| Endpoint | Function |
+| --- | --- |
+| `POST /api/ki67` | Validated count-based index from `{"positive_cells":125,"total_cells":500}` |
+| `GET /health` | Server health |
+| `GET /metrics` | In-process demonstration counters |
+| `POST /api/audit` | Legacy generic multi-worker audit (not Ki-67 grading) |
+| `POST /api/chat` | Deterministic **mock** response; no LLM inference or verification |
+| `GET /api/audit/logs` | In-memory HMAC-chain metadata and integrity result |
+| `GET /docs` | Automatically generated API documentation |
+
+The generic audit is available through `python cli.py audit`, `python cli.py batch` (audit-task CSV, **not** cell-count CSV), and `python cli.py verify-audit`. The `ki67-indexer` installed console command points to this legacy CLI for backward compatibility.
+
+`AUDIT_SECRET_KEY` is required for audit signing; plain counting can run without it. The audit log is **in-memory and is lost on restart**, not a durable clinical record. HMAC verification detects modifications to signed metadata in memory, but it is not independent evidence of record retention or completeness. The PHI-pattern guard is heuristic and **does not establish HIPAA de-identification or protect every form of PHI**. Do not enter or upload identifiable patient data.
+
+Docker Compose exposes the optional API on localhost only:
 
 ```bash
-# Start the server
-python cli.py serve
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+docker compose up --build
 ```
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/metrics` | GET | Prometheus-style metrics |
-| `/api/audit` | POST | Submit task for evaluation |
-| `/api/chat` | POST | Query the supervisor |
-| `/api/audit/logs` | GET | View audit trail |
+Do not expose the demo audit service to untrusted networks without additional access controls and operational security review.
 
-### Python API
-
-```python
-from ki67_indexer import calculate_metrics
-
-# Calculate Ki-67 score
-result = calculate_metrics(v1=14.5, v2=4.2, v3=1.8)
-print(result["score"])           # 17.07
-print(result["classification"])  # "Moderate / Intermediate"
-```
-
----
-
-## Algorithm
-
-The Ki-67 score is computed as a weighted sum of input values:
-
-```
-score = v1 + (v2 / 2) + (v3 / 3) + ...
-```
-
-**Classification Cutoffs:**
-| Range | Classification | Recommendation |
-|-------|---------------|----------------|
-| < 10% | Low / Standard | Standard monitoring |
-| 10-25% | Moderate / Intermediate | Close observation |
-| > 25% | High / Severe | Urgent clinical intervention |
-
----
-
-## Input Data Schema
-
-### CSV Batch Format
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `Patient_ID` | Patient identifier | Required |
-| `v1` | Primary Ki-67 value (0-100%) | Required |
-| `v2` | Secondary Ki-67 value (0-100%) | Optional |
-| `v3` | Tertiary Ki-67 value (0-100%) | Optional |
-
-See `sample.csv` for an example.
-
----
-
-## Security Features
-
-- **Zero-PHI Outbound Guard:** AST and regex inspection blocking SSNs, MRNs, phone numbers, emails, and patient identifiers
-- **HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation
-- **Input Validation:** All Ki-67 values validated to be within [0, 100] range
-- **Secure Defaults:** No hardcoded secrets; audit key must be provided via environment
-
----
-
-## Testing
+## Tests and development
 
 ```bash
-# Run all tests
-pytest -v
-
-# Run with coverage
-pytest -v --cov=.
-
-# Run specific test files
-pytest test_ki67_indexer.py -v
-pytest tests/ -v
+python -m pip install -e ".[dev]"
+python -m pytest -q
+python -m compileall -q .
 ```
 
-### Simulation Benchmark
+The GitHub Actions test workflow covers Python 3.10–3.12, including count arithmetic, invalid inputs, CSV handling, API responses and tamper detection. A separate workflow publishes the contents of `web/` to GitHub Pages when Pages is enabled for GitHub Actions deployment.
 
-```bash
-# Run high-throughput simulation (100 tasks)
-python simulator.py 100
-```
+The browser calculator needs no build step and is intended for current versions of Chrome, Edge, Firefox and Safari; a cross-browser test matrix is not currently automated.
 
----
+## Project layout
 
-## Docker Deployment
+- `ki67_indexer.py` — count-based arithmetic and backward-compatible legacy CLI
+- `web/index.html` — static browser calculator
+- `agents/api.py` — FastAPI service, count endpoint and legacy audit API
+- `agents/`, `enrichment.py`, `cli.py` — legacy mock/audit demonstration modules
+- `tests/`, `test_ki67_indexer.py` — automated regression tests
+- `sample.csv` — synthetic, non-identifying count data
+- `.github/workflows/` — tests and Pages publishing
 
-```bash
-# Build and run with Docker Compose
-export AUDIT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
-docker-compose up --build
+## License
 
-# Or with Docker directly
-docker build -t ki67-proliferation-indexer .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=$AUDIT_SECRET_KEY ki67-proliferation-indexer
-```
-
----
-
-## Project Structure
-
-```
-ki67-proliferation-indexer/
-├── ki67_indexer.py      # Core algorithm and CLI
-├── cli.py               # Enterprise CLI with audit
-├── enrichment.py        # Enrichment engines
-├── simulator.py         # Load testing simulator
-├── agents/              # Multi-agent architecture
-│   ├── base.py          # Security, PHI guard, audit
-│   ├── models.py        # Pydantic schemas
-│   ├── supervisor.py    # Orchestrator
-│   ├── workers.py       # Domain workers
-│   ├── api.py           # FastAPI endpoints
-│   └── ...
-├── tests/               # Test suite
-├── web/                 # Operations console UI
-├── Dockerfile
-├── docker-compose.yml
-└── pyproject.toml
-```
+[MIT](LICENSE).
