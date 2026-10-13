@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ki-67 Proliferation Indexer
-Calculates Ki-67 labeling index (%) from hot-spot and global counts with breast/NET grading cutoffs.
+Calculates the Ki-67 positive-tumour-nucleus fraction from counts. Legacy weighted input mode is not a valid labeling index.
 
 Zero-dependency Python implementation with single and batch evaluation.
 Author: Dr. Abu Suraih Sakhri
@@ -14,7 +14,7 @@ import json
 import math
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 
 def calculate_index(positive_cells: int, total_cells: int) -> Dict[str, Any]:
@@ -73,10 +73,10 @@ def calculate_metrics(**kwargs) -> Dict[str, Any]:
         if not (0 <= fv <= 100):
             raise ValueError(f"Parameter '{key}' value {fv} is outside valid Ki-67 range [0, 100].")
         params[key] = fv
-        numeric.append(fv)
+        numeric.append((int(key[1:]), fv))
     if not numeric:
         raise ValueError("Provide positive_cells and total_cells, or legacy v1/v2/... values.")
-    score = sum(value / index for index, value in enumerate(numeric, 1))
+    score = sum(value / index for index, value in numeric)
     rounded_score = round(score, 2)
     if rounded_score < 10:
         tier = "Low / Standard"
