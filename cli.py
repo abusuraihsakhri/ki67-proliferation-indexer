@@ -30,7 +30,7 @@ def main(argv=None):
     p_chat.add_argument("query", nargs="+")
 
     # Batch
-    p_batch = subparsers.add_parser("batch", help="Batch process CSV records")
+    p_batch = subparsers.add_parser("batch", help="Batch process generic audit-task CSV records (not cell counts)")
     p_batch.add_argument("-i", "--input", required=True)
     p_batch.add_argument("-o", "--output", default="results.csv")
 
@@ -94,7 +94,7 @@ def main(argv=None):
                 primary_metric=float(r.get("primary_metric", 15.0)),
                 secondary_metric=float(r.get("secondary_metric", 5.0)),
                 status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
+                is_critical_flag=str(r.get("is_critical_flag", "false")).strip().lower() in {"1", "true", "yes"},
             )
             dossier = supervisor.process_task(payload)
             row_dict = dict(r)
