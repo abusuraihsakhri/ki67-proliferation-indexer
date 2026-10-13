@@ -1,7 +1,7 @@
 """
 Specialized Domain Worker Agents for Ki67 Proliferation Indexer.
 Domain: Clinical & Biomedical AI
-Standard: CAP / CLSI / ISO Standards
+Scope: unvalidated generic audit demonstrations
 """
 import uuid
 from typing import Dict, Any, List, Optional
