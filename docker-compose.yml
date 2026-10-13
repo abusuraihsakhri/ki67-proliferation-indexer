@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   ki67-proliferation-indexer:
     build: .
     container_name: ki67-proliferation-indexer
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - AUDIT_SECRET_KEY=${AUDIT_SECRET_KEY:?AUDIT_SECRET_KEY must be set in .env file}
       - MODEL_PROVIDER=${MODEL_PROVIDER:-mock}

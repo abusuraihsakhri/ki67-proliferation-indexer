@@ -1,112 +1,110 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Ki67 Proliferation Indexer API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "title": "Ki-67 Proliferation Indexer API",
+    "version": "3.0.1",
+    "description": "Count-based Ki-67 arithmetic and a separately scoped legacy mock audit workflow. Not a validated clinical grading service."
   },
   "paths": {
-    "/health": {
+    "/": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Serve local static calculator",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "HTML calculator"
+          }
+        }
+      }
+    },
+    "/api/ki67": {
+      "post": {
+        "summary": "Compute positive / total tumour nucleus percentage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "positive_cells",
+                  "total_cells"
+                ],
+                "properties": {
+                  "positive_cells": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total_cells": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Count ratio and raw counts"
+          },
+          "422": {
+            "description": "Invalid or inconsistent count input"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Service health",
+        "responses": {
+          "200": {
+            "description": "Service metadata"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "In-memory generic audit counters (JSON)",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Counts"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "task_id": {
-                    "type": "string"
-                  },
-                  "target_identifier": {
-                    "type": "string"
-                  },
-                  "primary_metric": {
-                    "type": "number"
-                  },
-                  "secondary_metric": {
-                    "type": "number"
-                  },
-                  "status_descriptor": {
-                    "type": "string"
-                  },
-                  "is_critical_flag": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "task_id",
-                  "target_identifier",
-                  "primary_metric"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Process legacy generic audit task (not clinical grading)",
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Generic demonstration dossier"
+          },
+          "422": {
+            "description": "Rejected patient identifier"
+          },
+          "503": {
+            "description": "Audit signing unavailable"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "query"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Deterministic mock response, no LLM analysis",
         "responses": {
           "200": {
-            "description": "Supervisory response"
+            "description": "Mock response"
           }
         }
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "In-memory HMAC chain metadata",
         "responses": {
           "200": {
-            "description": "Cryptographic audit trail"
+            "description": "Audit metadata and integrity verification"
           }
         }
       }

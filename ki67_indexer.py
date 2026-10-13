@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Ki-67 Proliferation Indexer
-Calculates Ki-67 labeling index (%) from hot-spot and global counts with breast/NET grading cutoffs.
+Calculates the Ki-67 positive-tumour-nucleus fraction from counts. Legacy weighted input mode is not a valid labeling index.
 
 Zero-dependency Python implementation with single and batch evaluation.
 Author: Dr. Abu Suraih Sakhri
@@ -11,74 +11,86 @@ License: MIT
 import argparse
 import csv
 import json
-import os
-import sys
+import math
+import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
+
+
+def calculate_index(positive_cells: int, total_cells: int) -> Dict[str, Any]:
+    """Ki-67 labeling index = 100 * positive tumour nuclei / total tumour nuclei.
+
+    Counts must be non-negative integers, with a nonzero denominator and no more
+    positive than total nuclei. This arithmetic does not establish tumour grade.
+    """
+    for name, value in (("positive_cells", positive_cells), ("total_cells", total_cells)):
+        if isinstance(value, bool) or not re.fullmatch(r"[0-9]+", str(value).strip()):
+            raise ValueError(f"{name} must be a non-negative integer.")
+    positive, total = int(positive_cells), int(total_cells)
+    if total == 0:
+        raise ValueError("total_cells must be greater than zero.")
+    if positive > total:
+        raise ValueError("positive_cells cannot exceed total_cells.")
+    return {
+        "tool": "ki67-proliferation-indexer",
+        "score": round(100.0 * (positive / total), 2),
+        "positive_cells": positive,
+        "total_cells": total,
+        "method": "positive_over_total",
+        "classification": "Not assigned; tumour-specific interpretation required",
+        "clinical_recommendation": "None. Validate counting method and interpret in the appropriate tumour context.",
+        "inputs_evaluated": 2,
+    }
 
 
 def calculate_metrics(**kwargs) -> Dict[str, Any]:
+    """Compute a count-based Ki-67 index, or preserve explicitly labeled legacy scores.
+
+    Prefer positive_cells and total_cells. Legacy v1, v2, ... weighted sums are
+    retained solely for backwards compatibility and are NOT labeling indices.
     """
-    Core domain algorithm for ki67-proliferation-indexer.
+    has_positive = kwargs.get("positive_cells") is not None
+    has_total = kwargs.get("total_cells") is not None
+    if has_positive or has_total:
+        if not (has_positive and has_total):
+            raise ValueError("Both positive_cells and total_cells are required.")
+        return calculate_index(kwargs["positive_cells"], kwargs["total_cells"])
 
-    Computes a Ki-67 proliferation score from one or more numeric input values.
-    The primary value contributes fully; subsequent values contribute with
-    diminishing weights (1/n).
-
-    Args:
-        **kwargs: Named numeric parameters (v1, v2, v3, ...). Non-numeric
-                  values are treated as metadata and excluded from scoring.
-
-    Returns:
-        Dictionary with score, classification, clinical recommendation, and
-        metadata about the computation.
-
-    Raises:
-        ValueError: If any numeric value is outside the valid Ki-67 range [0, 100].
-    """
+    numeric = []
     params = {}
-    for k, v in kwargs.items():
-        if v is not None:
-            try:
-                fv = float(v)
-                # Ki-67 values represent percentages and must be in [0, 100]
-                if fv < 0.0 or fv > 100.0:
-                    raise ValueError(
-                        f"Parameter '{k}' value {fv} is outside valid Ki-67 range [0, 100]."
-                    )
-                params[k] = fv
-            except (ValueError, TypeError) as e:
-                if "outside valid Ki-67 range" in str(e):
-                    raise
-                params[k] = str(v)
-
-    # Deterministic domain logic
-    numeric_vals = [val for val in params.values() if isinstance(val, (int, float))]
-    primary_val = numeric_vals[0] if numeric_vals else 0.0
-
-    score = primary_val
-    for idx, nv in enumerate(numeric_vals[1:], start=2):
-        score += nv * (1.0 / idx)
-
+    for key, value in kwargs.items():
+        if value is None:
+            continue
+        if not re.fullmatch(r"v[1-9][0-9]*", key):
+            params[key] = str(value)
+            continue
+        try:
+            fv = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{key} must be a finite numeric percentage.") from exc
+        if not math.isfinite(fv):
+            raise ValueError(f"{key} must be finite.")
+        if not (0 <= fv <= 100):
+            raise ValueError(f"Parameter '{key}' value {fv} is outside valid Ki-67 range [0, 100].")
+        params[key] = fv
+        numeric.append((int(key[1:]), fv))
+    if not numeric:
+        raise ValueError("Provide positive_cells and total_cells, or legacy v1/v2/... values.")
+    score = sum(value / index for index, value in numeric)
     rounded_score = round(score, 2)
-
-    # Classification / tiering based on standard Ki-67 cutoffs
-    # Low: <10% (grade 1), Moderate: 10-25% (grade 2), High: >25% (grade 3)
-    if rounded_score < 10.0:
+    if rounded_score < 10:
         tier = "Low / Standard"
-        action = "Standard monitoring or negative cutoff"
-    elif rounded_score < 25.0:
+    elif rounded_score < 25:
         tier = "Moderate / Intermediate"
-        action = "Close observation or secondary evaluation"
     else:
         tier = "High / Severe"
-        action = "Urgent clinical intervention or primary positive finding"
-
     return {
         "tool": "ki67-proliferation-indexer",
         "score": rounded_score,
         "classification": tier,
-        "clinical_recommendation": action,
+        "method": "legacy_weighted_proxy_not_ki67",
+        "warning": "Legacy weighted proxy: not a valid Ki-67 labeling index or clinical grade.",
+        "clinical_recommendation": "None; do not use the legacy score for clinical decisions.",
         "inputs_evaluated": len(params),
     }
 
@@ -90,7 +102,7 @@ def process_single(args) -> None:
     Args:
         args: Parsed argparse namespace containing v1, v2, v3 parameters.
     """
-    kwargs = vars(args)
+    kwargs = vars(args).copy()
     kwargs.pop("func", None)
     kwargs.pop("command", None)
     res = calculate_metrics(**kwargs)
@@ -131,18 +143,40 @@ def process_batch(input_csv: str, output_csv: str) -> None:
     except csv.Error as e:
         raise ValueError(f"Failed to parse CSV file {input_csv}: {e}") from e
 
-    out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
+    if ("positive_cells" in fieldnames) != ("total_cells" in fieldnames):
+        raise ValueError("CSV requires both positive_cells and total_cells.")
+    if not {"positive_cells", "total_cells"}.issubset(fieldnames) and not any(
+        re.fullmatch(r"v[1-9][0-9]*", name) for name in fieldnames
+    ):
+        raise ValueError("CSV requires counts or legacy v1/v2/... columns.")
+    if any(None in row for row in rows):
+        raise ValueError("CSV contains more values than declared headers.")
+
+    added = ["score", "classification", "clinical_recommendation", "method"]
+    out_fields = list(dict.fromkeys(fieldnames + added))
     out_rows = []
 
     for r in rows:
-        calc_res = calculate_metrics(**r)
+        if "positive_cells" in fieldnames:
+            calc_res = calculate_metrics(
+                positive_cells=r["positive_cells"], total_cells=r["total_cells"]
+            )
+        else:
+            values = {
+                key: value for key, value in r.items()
+                if re.fullmatch(r"v[1-9][0-9]*", key) and value not in ("", None)
+            }
+            calc_res = calculate_metrics(**values)
         row_dict = dict(r)
         row_dict["score"] = calc_res["score"]
         row_dict["classification"] = calc_res["classification"]
         row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
+        row_dict["method"] = calc_res["method"]
         out_rows.append(row_dict)
 
     output_path = Path(output_csv)
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError("Input and output CSV paths must be different to avoid overwriting source data.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, mode="w", encoding="utf-8", newline="") as f:
@@ -163,23 +197,25 @@ def main(argv=None):
     single_parser = subparsers.add_parser("single", help="Evaluate single case")
     single_parser.add_argument(
         "--v1", type=float, default=10.0,
-        help="Primary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v1 (not a Ki-67 index)"
     )
     single_parser.add_argument(
         "--v2", type=float, default=5.0,
-        help="Secondary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v2 (not a Ki-67 index)"
     )
     single_parser.add_argument(
         "--v3", type=float, default=2.0,
-        help="Tertiary Ki-67 value (%% positive cells, 0-100)"
+        help="Legacy weighted proxy component v3 (not a Ki-67 index)"
     )
+    single_parser.add_argument("--positive-cells", type=int, default=None, help="Ki-67 positive tumour nuclei")
+    single_parser.add_argument("--total-cells", type=int, default=None, help="All tumour nuclei counted")
     single_parser.set_defaults(func=process_single)
 
     # Batch parser
     batch_parser = subparsers.add_parser("batch", help="Process batch CSV")
     batch_parser.add_argument(
         "-i", "--input", required=True,
-        help="Input CSV file with patient records"
+        help="Input CSV with positive_cells,total_cells or legacy v1/v2 columns"
     )
     batch_parser.add_argument(
         "-o", "--output", default="results.csv",
