@@ -15,7 +15,7 @@ supervisor = SystemSupervisor(model_provider="mock")
 app = FastAPI(
     title="Ki67 Proliferation Indexer API",
     description="Count-based Ki-67 index and separately labeled legacy audit workflow",
-    version="3.0.0-ENTERPRISE",
+    version="3.0.1",
 )
 
 
@@ -46,7 +46,7 @@ def api_ki67(payload: CountRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "ki67-proliferation-indexer", "domain": "Clinical & Biomedical AI", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "HEALTHY", "service": "ki67-proliferation-indexer", "domain": "Clinical & Biomedical AI", "version": "3.0.1"}
 
 
 @app.get("/metrics")
