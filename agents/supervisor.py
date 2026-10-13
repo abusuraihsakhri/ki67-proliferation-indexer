@@ -75,5 +75,5 @@ class SystemSupervisor:
 
     def query_supervisory_chat(self, query: str) -> str:
         PHIGuard.assert_no_phi(query)
-        prompt = f"Supervisor inquiry for Ki67 Proliferation Indexer under CAP / CLSI / ISO Standards: {query}"
+        prompt = f"Supervisor inquiry for Ki67 Proliferation Indexer as a mock demonstration, with no clinical verification: {query}"
         return self.llm.invoke(prompt)
