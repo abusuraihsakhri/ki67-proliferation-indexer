@@ -1,236 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ki67 Proliferation Indexer — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Ki-67 Proliferation Indexer</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172338;background:#f4f7fb}
+*{box-sizing:border-box}body{max-width:1050px;margin:0 auto;padding:32px 20px 60px}
+h1{font-size:clamp(1.6rem,3vw,2.3rem);margin:0 0 8px}h2{font-size:1.1rem;margin:0 0 16px}
+p{line-height:1.55;color:#526176}.intro{max-width:730px;margin:8px 0 24px}
+.shell{background:#fff;border:1px solid #dce4ef;border-radius:14px;padding:24px;margin:16px 0;box-shadow:0 5px 20px #192f4610}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+label{display:block;font-size:.88rem;font-weight:650;margin-bottom:7px}
+input{width:100%;border:1px solid #aab9cb;border-radius:8px;padding:11px 12px;font:inherit;background:#fff;color:#172338}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #67aafc;outline-offset:2px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+button{border:0;border-radius:8px;padding:11px 17px;font:inherit;font-weight:650;cursor:pointer;background:#1956a6;color:#fff}
+button.secondary{background:#eef3fa;color:#194577;border:1px solid #bdcfe4}
+button:hover{filter:brightness(.95)}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.metric{background:#f0f5fd;border-radius:10px;padding:16px}
+.metric small{display:block;color:#4d6485}.metric strong{display:block;font-size:1.9rem;line-height:1.4;font-variant-numeric:tabular-nums}
+#notice{min-height:1.5em;font-weight:600;color:#a92d37;margin-top:14px}
+.hint{font-size:.86rem;margin:8px 0;color:#53687f}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:11px 8px;border-bottom:1px solid #dfE5ed;text-align:left}th{font-size:.84rem;color:#4e5d70}
+.table-wrap{overflow-x:auto}td button{padding:6px 10px;font-size:.8rem}
+details summary{cursor:pointer;font-weight:650}
+#api-output{white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;padding:12px;border-radius:8px;background:#f1f5fa;font-size:.81rem}
+footer{font-size:.85rem;color:#5b6c80;margin-top:22px}
+@media(max-width:650px){body{padding:20px 12px}.shell{padding:16px}.grid,.results{grid-template-columns:1fr}th,td{padding:8px 4px}}
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Ki67 Proliferation Indexer</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Ki67 Proliferation Indexer Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "ki67-proliferation-indexer",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+<header>
+<h1>Ki-67 Proliferation Indexer</h1>
+<p class="intro">Calculate the proportion of Ki-67-positive tumour nuclei using observed cell counts. All calculations and exports run locally in this browser; no identifiers or counts are sent to a server by the calculator.</p>
+</header>
+<main>
+<section class="shell" aria-labelledby="counting-title">
+<h2 id="counting-title">Count-based Ki-67 assessment</h2>
+<form id="count-form">
+<div class="grid">
+<div><label for="sample">Specimen code (non-identifying)</label><input id="sample" name="sample" autocomplete="off" maxlength="80" placeholder="e.g. SAMPLE-001"></div>
+<div><label for="positive">Positive tumour nuclei</label><input id="positive" name="positive" required type="number" min="0" max="10000000" step="1" value="125"></div>
+<div><label for="total">Total tumour nuclei counted</label><input id="total" name="total" required type="number" min="1" max="10000000" step="1" value="500"></div>
+</div>
+<div class="actions"><button type="submit">Calculate and add field</button><button type="button" class="secondary" id="reset">Clear fields</button></div>
+<p class="hint">Count only eligible tumour nuclei according to your validated, tumour-specific scoring protocol. Exclude non-tumour cells and staining artefacts.</p>
+</form>
+<div id="notice" role="alert" aria-live="polite"></div>
+<div class="results" aria-live="polite">
+<div class="metric"><small>Most recent field</small><strong id="current">—</strong></div>
+<div class="metric"><small>Pooled index across added fields</small><strong id="pooled">—</strong></div>
+</div>
+<p class="hint">Ki-67 index (%) = 100 × positive nuclei ÷ total nuclei. The pooled value uses summed cell counts, not the unweighted average of field percentages.</p>
+</section>
+<section class="shell" aria-labelledby="fields-title">
+<h2 id="fields-title">Field-level counting log</h2>
+<div class="table-wrap"><table><thead><tr><th>Specimen / field</th><th>Positive</th><th>Total</th><th>Index</th><th>Action</th></tr></thead><tbody id="records"><tr id="empty"><td colspan="5">No fields recorded.</td></tr></tbody></table></div>
+<div class="actions"><button type="button" id="export" class="secondary" disabled>Export CSV</button><button type="button" id="clear" class="secondary" disabled>Clear all</button></div>
+<p class="hint">Records stay only in this page's memory and disappear on reload. Avoid entering names, MRNs, or other patient identifiers.</p>
+</section>
+<section class="shell">
+<h2>Interpretation and limitations</h2>
+<p>The index is a descriptive measurement, <strong>not a standalone tumour grade, diagnosis, prognosis or treatment recommendation.</strong> Counting area, sampling method, cell eligibility and grade cutoffs depend on the tumour type and reporting protocol. This tool does not analyze microscopy images or implement the IKWG weighted-global scoring application.</p>
+<p class="hint">Scientific reference: <a href="https://doi.org/10.1093/jnci/djaa201" target="_blank" rel="noopener noreferrer">International Ki67 Working Group recommendations (JNCI, 2021)</a>.</p>
+</section>
+<details class="shell" id="api-section">
+<summary>Backend audit interface (requires a running local API)</summary>
+<p class="hint">This legacy generic audit workflow is independent of the Ki-67 count calculator. It does not compute tumour grades. It requires the FastAPI server and a configured AUDIT_SECRET_KEY. Do not submit patient information.</p>
+<form id="audit-form">
+<div class="grid">
+<div><label for="task-id">Task ID</label><input id="task-id" value="TASK-001" required maxlength="80"></div>
+<div><label for="target-id">Target code</label><input id="target-id" value="SPECIMEN-001" required maxlength="80"></div>
+<div><label for="primary-metric">Primary metric</label><input id="primary-metric" type="number" step="any" value="15" required></div>
+</div>
+<div class="actions"><button type="submit">Submit backend audit</button></div>
+</form>
+<p id="api-status" role="status" aria-live="polite"></p>
+<pre id="api-output"></pre>
+</details>
+</main>
+<footer>Research and educational use. Verify counts and local clinical reporting requirements independently.</footer>
+<script>
+(function(){
+"use strict";
+const byId = id => document.getElementById(id);
+const rows = [];
+function numberInput(id){
+  const value=byId(id).value.trim();
+  if(!/^\d+$/.test(value)) throw Error("Cell counts must be whole, non-negative integers.");
+  const n=Number(value);
+  if(!Number.isSafeInteger(n)||n>10000000) throw Error("Count exceeds the supported range (0–10,000,000).");
+  return n;
+}
+function index(pos,total){return (100*pos/total).toFixed(2)+"%";}
+function render(){
+  const body=byId("records");body.replaceChildren();
+  if(!rows.length){
+    const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.textContent="No fields recorded.";tr.append(td);body.append(tr);
+    byId("pooled").textContent="—";
+  }else{
+    rows.forEach((entry,i)=>{
+      const tr=document.createElement("tr");
+      [entry.sample||("Field "+(i+1)),entry.positive,entry.total,index(entry.positive,entry.total)].forEach(value=>{
+        const td=document.createElement("td");td.textContent=String(value);tr.append(td);
+      });
+      const action=document.createElement("td"),btn=document.createElement("button");btn.type="button";btn.className="secondary";btn.textContent="Remove";
+      btn.addEventListener("click",()=>{rows.splice(i,1);render();});action.append(btn);tr.append(action);body.append(tr);
+    });
+    const pos=rows.reduce((n,r)=>n+r.positive,0), total=rows.reduce((n,r)=>n+r.total,0);
+    byId("pooled").textContent=index(pos,total);
+  }
+  byId("export").disabled=byId("clear").disabled=!rows.length;
+}
+byId("count-form").addEventListener("submit",event=>{
+  event.preventDefault();
+  try{
+    const positive=numberInput("positive"),total=numberInput("total");
+    if(total===0)throw Error("Total tumour nuclei must be greater than zero.");
+    if(positive>total)throw Error("Positive nuclei cannot exceed total tumour nuclei.");
+    const sample=byId("sample").value.trim();
+    rows.push({sample,positive,total});
+    byId("current").textContent=index(positive,total);
+    byId("notice").textContent="";render();
+  }catch(err){byId("notice").textContent=err.message;}
+});
+byId("reset").addEventListener("click",()=>{byId("count-form").reset();byId("notice").textContent="";});
+byId("clear").addEventListener("click",()=>{rows.length=0;byId("current").textContent="—";render();});
+byId("export").addEventListener("click",()=>{
+  function csv(v){
+    let s=String(v);
+    if(/^[=+\-@\t\r]/.test(s))s="'"+s;
+    return '"'+s.replace(/"/g,'""')+'"';
+  }
+  const lines=[["sample_code","positive_cells","total_cells","ki67_percent"].join(",")];
+  rows.forEach((r,i)=>lines.push([r.sample||("Field "+(i+1)),r.positive,r.total,(100*r.positive/r.total).toFixed(2)].map(csv).join(",")));
+  const blob=new Blob([lines.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="ki67-counts.csv";
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+byId("audit-form").addEventListener("submit",async event=>{
+  event.preventDefault();const status=byId("api-status");status.textContent="Contacting local backend…";
+  const primary=Number(byId("primary-metric").value);
+  if(!Number.isFinite(primary)){status.textContent="Invalid primary metric.";return;}
+  const payload={task_id:byId("task-id").value,target_identifier:byId("target-id").value,primary_metric:primary};
+  try{
+    if(location.protocol==="file:"||location.hostname.endsWith("github.io"))throw Error("No backend is available on this static site.");
+    const resp=await fetch("./api/audit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const data=await resp.json();
+    if(!resp.ok)throw Error("API returned HTTP "+resp.status+": "+JSON.stringify(data));
+    byId("api-output").textContent=JSON.stringify(data,null,2);
+    status.textContent="Backend audit returned a result.";
+  }catch(err){byId("api-output").textContent="";status.textContent="Backend audit unavailable: "+err.message;}
+});
+render();
+})();
+</script>
 </body>
 </html>
